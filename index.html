@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>¡Atrapa tu Uniforme! – UNE</title>
+    <title>¡Atrapa tu Uniforme! - UNE</title>
     <meta
       name="description"
       content="Juego arcade de Universidad UNE. ¡Atrapa los uniformes y acumula puntos!"
@@ -25,6 +25,13 @@
       <div id="hud" class="hidden">
         <button id="btnPause" class="btn-pause" title="Pausar">⏸</button>
         <div class="hud-score" id="hudScore">0 pts</div>
+        <div
+          class="hud-lives"
+          id="hudLives"
+          style="font-size: 1.2rem; margin: 0 10px"
+        >
+          ❤️❤️❤️
+        </div>
         <div class="hud-right">
           <div class="hud-round" id="hudRound">Nivel: Normal</div>
           <div class="hud-timer" id="hudTimer">45s</div>
@@ -120,7 +127,7 @@
       <div class="overlay hidden" id="scrGameOver">
         <img
           class="logo-img"
-          src="https://intranet.universidad-une.com/web/image/website/34/logo/Intranet%20UNE?unique=c33fd40"
+          src="https://intranet.universidad-une.com/web/image/1820826-e12a11bd/logo%20blanco.png"
           alt="UNE Logo"
         />
         <div
@@ -259,6 +266,13 @@
             style="margin-top: 4px; font-size: 0.85rem"
           >
             Jugar de nuevo sin registrarse
+          </button>
+          <button
+            class="btn btn-gray"
+            id="btnExit2"
+            style="margin-top: 4px; font-size: 0.85rem"
+          >
+            Ir al menú principal
           </button>
         </div>
 

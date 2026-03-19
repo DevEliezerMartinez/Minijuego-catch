@@ -18,10 +18,12 @@
     "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=120&h=120&fit=crop",
   ];
 
+  const LOGO_URLS = ["logos/enjoy.png", "logos/linea.png", "logos/vtu.png"];
+
   const LEVELS = [
-    { speed: 2.5, label: "Normal" },
-    { speed: 4.0, label: "Rápido" },
-    { speed: 6.0, label: "Extremo" },
+    { speed: 2.5, label: "Normal", bg: "#001a71", spawnFactor: 1.0 },
+    { speed: 4.0, label: "Rápido", bg: "#003b14", spawnFactor: 0.7 },
+    { speed: 8.5, label: "Extremo", bg: "#4a0000", spawnFactor: 0.4 },
   ];
   const ROUND_TIME = 45;
   const CART_W = 80,
@@ -32,7 +34,10 @@
   const CART_SPEED = 7; // px per frame at 60fps
 
   // ── STATE ────────────────────────────────────────────────────────────────────
-  let score = 0, combo = 0, timer = ROUND_TIME, gameRunning = false;
+  let score = 0,
+    combo = 0,
+    timer = ROUND_TIME,
+    gameRunning = false;
   let currentLevelIndex = 0;
   let isPaused = false;
   let cartX = 0;
@@ -43,7 +48,13 @@
     timerAcc = 0;
   let comboTimeout = null;
   let goodImgs = [],
-    badImgs = [];
+    badImgs = [],
+    logoImgs = [];
+  let cartImg = new Image();
+  cartImg.src = "Camioneta2.png";
+  let goodSound = new Audio("efectos/bad.m4a");
+  let badSound = new Audio("life.m4a");
+  let wrongs = 0;
   let assetsLoaded = false;
 
   // ── KEYBOARD ─────────────────────────────────────────────────────────────────
@@ -76,6 +87,7 @@
   const btnResume = document.getElementById("btnResume");
   const btnRestart = document.getElementById("btnRestart");
   const btnExit = document.getElementById("btnExit");
+  const btnExit2 = document.getElementById("btnExit2");
 
   // ── CANVAS SETUP ─────────────────────────────────────────────────────────────
   function setupCanvas() {
@@ -92,7 +104,7 @@
 
   // ── ASSET PRELOAD ─────────────────────────────────────────────────────────────
   function preload() {
-    const total = GOOD_URLS.length + BAD_URLS.length;
+    const total = GOOD_URLS.length + BAD_URLS.length + LOGO_URLS.length;
     let loaded = 0;
     function onFinish() {
       loaded++;
@@ -118,13 +130,19 @@
       img.src = url;
       badImgs[i] = img;
     });
+    LOGO_URLS.forEach((url, i) => {
+      const img = new Image();
+      img.onload = img.onerror = onFinish;
+      img.src = url;
+      logoImgs[i] = img;
+    });
   }
 
   // ── DRAW BACKGROUND ───────────────────────────────────────────────────────────
   function drawBg() {
     const W = canvas.width / (window.devicePixelRatio || 1);
     const H = canvas.height / (window.devicePixelRatio || 1);
-    ctx.fillStyle = "#001a71";
+    ctx.fillStyle = LEVELS[currentLevelIndex].bg;
     ctx.fillRect(0, 0, W, H);
     ctx.strokeStyle = "rgba(255,255,255,0.1)";
     ctx.lineWidth = 0.5;
@@ -148,57 +166,86 @@
     const W = canvas.width / (window.devicePixelRatio || 1);
     const H = canvas.height / (window.devicePixelRatio || 1);
     const y = H - CART_H - 16;
-    ctx.save();
-    ctx.shadowColor = "rgba(226,35,25,.5)";
-    ctx.shadowBlur = 12;
-    ctx.fillStyle = "#000c36";
-    ctx.beginPath();
-    if (ctx.roundRect) {
-      ctx.roundRect(cartX, y, CART_W, CART_H, 10);
+    if (cartImg.complete && cartImg.naturalWidth) {
+      const drawSize = CART_W + 100; // Mantiene el marco cuadrado 1:1
+      ctx.drawImage(
+        cartImg,
+        cartX - 50,
+        y - drawSize + CART_H + 20,
+        drawSize,
+        drawSize,
+      );
     } else {
-      // Polyfill for Safari
-      const r = 10,
-        w = CART_W,
-        h = CART_H;
-      ctx.moveTo(cartX + r, y);
-      ctx.arcTo(cartX + w, y, cartX + w, y + h, r);
-      ctx.arcTo(cartX + w, y + h, cartX, y + h, r);
-      ctx.arcTo(cartX, y + h, cartX, y, r);
-      ctx.arcTo(cartX, y, cartX + w, y, r);
-      ctx.closePath();
-    }
-    ctx.fill();
-    ctx.strokeStyle = "#e22319";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.restore();
-    ctx.font = "bold 16px Outfit,sans-serif";
-    ctx.fillStyle = "#e22319";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("UNE", cartX + CART_W / 2, y + CART_H / 2);
-    const wr = 7, wy = y + CART_H + 2;
-    [[cartX + 16, wy], [cartX + CART_W - 16, wy]].forEach(([wx, wy]) => {
+      ctx.save();
+      ctx.shadowColor = "rgba(226,35,25,.5)";
+      ctx.shadowBlur = 12;
+      ctx.fillStyle = "#000c36";
       ctx.beginPath();
-      ctx.arc(wx, wy, wr, 0, Math.PI * 2);
-      ctx.fillStyle = "#e22319";
+      if (ctx.roundRect) {
+        ctx.roundRect(cartX, y, CART_W, CART_H, 10);
+      } else {
+        // Polyfill for Safari
+        const r = 10,
+          w = CART_W,
+          h = CART_H;
+        ctx.moveTo(cartX + r, y);
+        ctx.arcTo(cartX + w, y, cartX + w, y + h, r);
+        ctx.arcTo(cartX + w, y + h, cartX, y + h, r);
+        ctx.arcTo(cartX, y + h, cartX, y, r);
+        ctx.arcTo(cartX, y, cartX + w, y, r);
+        ctx.closePath();
+      }
       ctx.fill();
-      ctx.strokeStyle = "#001a71";
+      ctx.strokeStyle = "#e22319";
       ctx.lineWidth = 2;
       ctx.stroke();
-    });
+      ctx.restore();
+      ctx.font = "bold 16px Outfit,sans-serif";
+      ctx.fillStyle = "#e22319";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("UNE", cartX + CART_W / 2, y + CART_H / 2);
+      const wr = 7,
+        wy = y + CART_H + 2;
+      [
+        [cartX + 16, wy],
+        [cartX + CART_W - 16, wy],
+      ].forEach(([wx, wy]) => {
+        ctx.beginPath();
+        ctx.arc(wx, wy, wr, 0, Math.PI * 2);
+        ctx.fillStyle = "#e22319";
+        ctx.fill();
+        ctx.strokeStyle = "#001a71";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      });
+    }
   }
 
   // ── ITEMS ─────────────────────────────────────────────────────────────────────
   function spawnItem() {
     const W = canvas.width / (window.devicePixelRatio || 1);
-    const isGood = Math.random() < 0.55;
-    const pool = isGood ? goodImgs : badImgs;
+    const r = Math.random();
+    let isGood = false,
+      isLogo = false;
+    let pool;
+    if (r < 0.15 && logoImgs.length > 0) {
+      isGood = true;
+      isLogo = true;
+      pool = logoImgs;
+    } else if (r < 0.6) {
+      isGood = true;
+      pool = goodImgs;
+    } else {
+      isGood = false;
+      pool = badImgs;
+    }
     const img = pool[Math.floor(Math.random() * pool.length)];
     items.push({
       x: ITEM_SIZE / 2 + Math.random() * (W - ITEM_SIZE),
       y: -ITEM_SIZE,
       isGood,
+      isLogo,
       img,
       speed: LEVELS[currentLevelIndex].speed + Math.random() * 0.5,
       wobble: Math.random() * Math.PI * 2,
@@ -209,8 +256,10 @@
     const W = canvas.width / (window.devicePixelRatio || 1);
     const H = canvas.height / (window.devicePixelRatio || 1);
     items.forEach((it) => {
-      it.y += it.speed * (dt / 16.67);
-      it.x += Math.sin((it.wobble += 0.08)) * 1.2;
+      it.wobble += 0.08;
+      const dynSpeed = it.speed + Math.sin(it.wobble * 2) * 2.0;
+      it.y += Math.max(0.5, dynSpeed) * (dt / 16.67);
+      it.x += Math.sin(it.wobble) * 1.5;
       it.x = Math.max(ITEM_SIZE / 2, Math.min(W - ITEM_SIZE / 2, it.x));
     });
     // Circle-rect collision
@@ -231,6 +280,8 @@
   function drawItemImg(it) {
     const r = ITEM_SIZE / 2;
     ctx.save();
+    const isBlinking = Math.floor(Date.now() / 150) % 2 === 0;
+    ctx.globalAlpha = isBlinking ? 0.6 : 1.0;
     // Circular clip
     ctx.beginPath();
     ctx.arc(it.x, it.y, r, 0, Math.PI * 2);
@@ -258,15 +309,37 @@
   // ── HIT LOGIC ─────────────────────────────────────────────────────────────────
   function hit(it) {
     if (it.isGood) {
+      if ("vibrate" in navigator) navigator.vibrate(100);
+      try {
+        goodSound.currentTime = 0;
+        goodSound.play().catch((e) => {});
+      } catch (e) {}
       combo++;
-      const pts = combo >= 3 ? 20 : 10;
+      let pts = combo >= 3 ? 20 : 10;
+      if (it.isLogo) pts *= 2;
       score = Math.max(0, score + pts);
-      spawnParticles(it.x, it.y, "#e22319");
+      spawnParticles(it.x, it.y, it.isLogo ? "#00ff00" : "#e22319");
       if (combo >= 3) showCombo();
     } else {
       score = Math.max(0, score - 15);
       combo = 0;
       spawnParticles(it.x, it.y, "#ff9500");
+      wrongs++;
+      try {
+        badSound.currentTime = 0;
+        badSound.play().catch((e) => {});
+      } catch (e) {}
+      const hudLives = document.getElementById("hudLives");
+      if (hudLives) {
+        hudLives.classList.remove("life-lost");
+        void hudLives.offsetWidth;
+        hudLives.classList.add("life-lost");
+      }
+      if (wrongs >= 3) {
+        updateHUD();
+        endGame();
+        return;
+      }
     }
     updateHUD();
   }
@@ -316,6 +389,11 @@
   // ── HUD ───────────────────────────────────────────────────────────────────────
   function updateHUD() {
     hudScore.textContent = score + " pts";
+    const hudLives = document.getElementById("hudLives");
+    if (hudLives) {
+      const lives = 3 - wrongs;
+      hudLives.textContent = "❤️".repeat(Math.max(0, lives));
+    }
     hudRound.textContent = `Nivel: ${LEVELS[currentLevelIndex].label}`;
     const secs = Math.ceil(timer);
     hudTimer.textContent = secs + "s";
@@ -347,8 +425,12 @@
       timer = Math.max(0, timer - 1);
       updateHUD();
     }
-    if (spawnTimer >= SPAWN_INTERVAL) {
-      spawnTimer = 0;
+    const activeSpawnInterval = Math.max(
+      300,
+      SPAWN_INTERVAL * LEVELS[currentLevelIndex].spawnFactor,
+    );
+    if (spawnTimer >= activeSpawnInterval) {
+      spawnTimer -= activeSpawnInterval;
       spawnItem();
     }
     if (timer <= 0) {
@@ -366,7 +448,10 @@
   // ── START / END ───────────────────────────────────────────────────────────────
   function startGame() {
     isPaused = false;
-    score = 0; combo = 0; timer = ROUND_TIME;
+    score = 0;
+    combo = 0;
+    timer = ROUND_TIME;
+    wrongs = 0;
     timerAcc = 0;
     lastTime = 0;
     items = [];
@@ -466,7 +551,7 @@
 
   btnPause.addEventListener("click", togglePause);
   btnResume.addEventListener("click", togglePause);
-  
+
   btnRestart.addEventListener("click", () => {
     isPaused = false;
     scrPause.classList.add("hidden");
@@ -477,6 +562,15 @@
     isPaused = false;
     gameRunning = false;
     scrPause.classList.add("hidden");
+    hud.classList.add("hidden");
+    scrStart.classList.remove("hidden");
+  });
+
+  btnExit2.addEventListener("click", () => {
+    isPaused = false;
+    gameRunning = false;
+    scrPause.classList.add("hidden");
+    scrGameOver.classList.add("hidden");
     hud.classList.add("hidden");
     scrStart.classList.remove("hidden");
   });
