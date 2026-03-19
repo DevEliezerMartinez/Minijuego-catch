@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>¡Atrapa tu Uniforme! – UNE</title>
+    <meta
+      name="description"
+      content="Juego arcade de Universidad UNE. ¡Atrapa los uniformes y acumula puntos!"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="main.css" />
+  </head>
+  <body>
+    <div id="gameWrap">
+      <canvas id="c"></canvas>
+      <div id="hud" class="hidden">
+        <div class="hud-score" id="hudScore">0 pts</div>
+        <div class="hud-right">
+          <div class="hud-round" id="hudRound">Ronda 1/4</div>
+          <div class="hud-timer" id="hudTimer">45s</div>
+        </div>
+      </div>
+      <div id="comboToast">🔥 ¡COMBO x<span id="comboNum">3</span>!</div>
+
+      <!-- SCREEN: START -->
+      <div class="overlay" id="scrStart">
+        <img
+          class="logo-img"
+          src="https://intranet.universidad-une.com/web/image/website/34/logo/Intranet%20UNE?unique=c33fd40"
+          alt="UNE Logo"
+        />
+        <div class="game-title">¡Atrapa tu<br />Uniforme!</div>
+        <div class="game-subtitle">El juego arcade de Universidad UNE</div>
+        <div class="legend">
+          <h4>¿Qué atrapar?</h4>
+          <div class="legend-row">
+            <div class="legend-col good">
+              <h5>✅ Atrapa (+10 pts)</h5>
+              <div class="legend-imgs">
+                <img class="legend-thumb" src="https://cdn.shopify.com/s/files/1/0971/1845/4076/files/unestoreuniformes-15.jpg?v=1773875718" alt="Uniforme UNE" />
+                <img class="legend-thumb" src="https://cdn.shopify.com/s/files/1/0971/1845/4076/files/unestoreuniformes-14.jpg?v=1773875718" alt="Uniforme UNE" />
+                <img class="legend-thumb" src="https://cdn.shopify.com/s/files/1/0971/1845/4076/files/unestoreuniformes-13.jpg?v=1773875718" alt="Uniforme UNE" />
+              </div>
+              <div class="legend-note">Uniformes de la tienda UNE</div>
+            </div>
+            <div class="legend-col bad">
+              <h5>❌ Esquiva (−15 pts)</h5>
+              <div class="legend-emojis">🍔🏀🐱🍕🎧🌮🎸🎮</div>
+              <div class="legend-note">Objetos ajenos al plantel</div>
+            </div>
+          </div>
+          <div style="margin-top: 8px; font-size: 0.73rem; color: var(--label)">
+            🔥 <b style="color: var(--gold)">Combo:</b> 3 buenos seguidos = +20 pts c/u
+          </div>
+        </div>
+        <div class="rounds-info">
+          <div class="rpill">R1 <span>Normal</span></div>
+          <div class="rpill">R2 <span>Rápido</span></div>
+          <div class="rpill">R3 <span>Veloz</span></div>
+          <div class="rpill">R4 <span>Extremo</span></div>
+        </div>
+        <div class="controls-hint">
+          🖱️ Mouse &nbsp;|&nbsp; 👆 Touch &nbsp;|&nbsp; ⬅️➡️ Teclado
+        </div>
+        <button class="btn btn-gold" id="btnPlay" disabled>
+          <span id="btnPlayTxt">Cargando...</span>
+        </button>
+      </div>
+
+      <!-- SCREEN: GAME OVER + FORM -->
+      <div class="overlay hidden" id="scrGameOver">
+        <img
+          class="logo-img"
+          src="https://intranet.universidad-une.com/web/image/website/34/logo/Intranet%20UNE?unique=c33fd40"
+          alt="UNE Logo"
+        />
+        <div
+          style="
+            font-size: 0.8rem;
+            color: var(--label);
+            margin-bottom: 4px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+          "
+        >
+          Juego terminado
+        </div>
+        <div class="go-score-big" id="goScore">0</div>
+        <div style="font-size: 0.8rem; color: var(--gold); margin-bottom: 2px">
+          puntos
+        </div>
+        <div class="go-msg" id="goMsg"></div>
+
+        <!-- FORM -->
+        <div id="captureForm" style="width: 100%">
+          <div class="go-divider"></div>
+          <div class="form-title">📋 Regístrate para el ranking UNE</div>
+
+          <div id="formStatus" class="status-msg hidden"></div>
+
+          <div class="form-group">
+            <label for="fNombre">Nombre *</label>
+            <input
+              type="text"
+              id="fNombre"
+              placeholder="Tu nombre"
+              maxlength="100"
+              autocomplete="given-name"
+            />
+            <div class="field-error">Mínimo 2 caracteres requeridos</div>
+          </div>
+          <div class="form-group">
+            <label for="fApellidos">Apellidos *</label>
+            <input
+              type="text"
+              id="fApellidos"
+              placeholder="Tus apellidos"
+              maxlength="100"
+              autocomplete="family-name"
+            />
+            <div class="field-error">Mínimo 2 caracteres requeridos</div>
+          </div>
+          <div class="form-group">
+            <label for="fCorreo">Correo electrónico *</label>
+            <input
+              type="email"
+              id="fCorreo"
+              placeholder="tucorreo@ejemplo.com"
+              maxlength="200"
+              autocomplete="email"
+              inputmode="email"
+            />
+            <div class="field-error">Ingresa un correo válido</div>
+          </div>
+          <div class="form-group">
+            <label for="fTelefono">Teléfono / WhatsApp *</label>
+            <input
+              type="tel"
+              id="fTelefono"
+              placeholder="10 dígitos, ej. 3312345678"
+              maxlength="20"
+              autocomplete="tel"
+              inputmode="tel"
+            />
+            <div class="field-error">Ingresa al menos 10 dígitos</div>
+          </div>
+          <div class="form-group">
+            <label for="fNivel">Nivel / Carrera *</label>
+            <select id="fNivel">
+              <option value="">— Selecciona tu nivel —</option>
+              <option>Secundaria</option>
+              <option>Bachillerato</option>
+              <option>Ciencias de la Salud</option>
+              <option>Gastronomía</option>
+              <option>Licenciatura</option>
+              <option>Posgrado</option>
+            </select>
+            <div class="field-error">Selecciona un nivel</div>
+          </div>
+          <div class="form-group" id="groupCarrera">
+            <div class="field-slide" id="slideCarrera">
+              <label for="fCarrera">Carrera / Programa *</label>
+              <input
+                type="text"
+                id="fCarrera"
+                placeholder="Ej. Medicina, Derecho..."
+                maxlength="100"
+              />
+              <div class="field-error">Mínimo 2 caracteres requeridos</div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="fPlantel">Plantel *</label>
+            <select id="fPlantel">
+              <option value="">— Selecciona tu plantel —</option>
+              <option>Plantel Torre UNE</option>
+              <option>Plantel Tesistán</option>
+            </select>
+            <div class="field-error">Selecciona un plantel</div>
+          </div>
+
+          <input type="hidden" id="fScore" value="0" />
+          <input type="hidden" id="fRonda" value="0" />
+
+          <button
+            class="btn btn-gold"
+            id="btnSubmit"
+            style="margin-bottom: 10px"
+          >
+            <span id="btnSubmitTxt">Enviar mi registro</span>
+          </button>
+          <div
+            id="btnWa"
+            class="hidden"
+            style="width: 100%; display: none; margin-bottom: 8px"
+          >
+            <a
+              href="https://wa.me/523312345678?text=Hola%20UNE%2C%20jugué%20¡Atrapa%20tu%20Uniforme!"
+              target="_blank"
+              class="btn btn-green"
+              style="text-decoration: none"
+            >
+              💬 Contactar por WhatsApp
+            </a>
+          </div>
+          <button
+            class="btn btn-gray"
+            id="btnReplay2"
+            style="margin-top: 4px; font-size: 0.85rem"
+          >
+            Jugar de nuevo sin registrarse
+          </button>
+        </div>
+
+        <!-- SUCCESS -->
+        <div
+          id="scrSuccess"
+          class="hidden"
+          style="
+            width: 100%;
+            display: none;
+            text-align: center;
+            padding-top: 20px;
+          "
+        >
+          <div class="success-icon">🎉</div>
+          <div class="success-title">¡Registro exitoso!</div>
+          <div class="success-sub" id="successSub">
+            Gracias, te contactaremos pronto.
+          </div>
+          <div class="success-pts" id="successPts"></div>
+          <button
+            class="btn btn-gold"
+            id="btnReplaySuccess"
+            style="max-width: 100%; margin-top: 8px"
+          >
+            Jugar de nuevo
+          </button>
+        </div>
+      </div>
+    </div>
+    <script src="main.js"></script>
+  </body>
+</html>
