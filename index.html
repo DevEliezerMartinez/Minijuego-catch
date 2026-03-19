@@ -23,19 +23,44 @@
     <div id="gameWrap">
       <canvas id="c"></canvas>
       <div id="hud" class="hidden">
+        <button id="btnPause" class="btn-pause" title="Pausar">⏸</button>
         <div class="hud-score" id="hudScore">0 pts</div>
         <div class="hud-right">
-          <div class="hud-round" id="hudRound">Ronda 1/4</div>
+          <div class="hud-round" id="hudRound">Nivel: Normal</div>
           <div class="hud-timer" id="hudTimer">45s</div>
         </div>
       </div>
       <div id="comboToast">🔥 ¡COMBO x<span id="comboNum">3</span>!</div>
 
+      <!-- SCREEN: PAUSE -->
+      <div
+        class="overlay hidden"
+        id="scrPause"
+        style="justify-content: center; z-index: 30"
+      >
+        <div class="game-title">PAUSA</div>
+        <button
+          class="btn btn-gold"
+          id="btnResume"
+          style="margin-bottom: 12px; margin-top: 20px"
+        >
+          ▶ Reanudar
+        </button>
+        <button
+          class="btn btn-gray"
+          id="btnRestart"
+          style="margin-bottom: 12px"
+        >
+          🔄 Reiniciar
+        </button>
+        <button class="btn btn-gray" id="btnExit">🚪 Salir al Menú</button>
+      </div>
+
       <!-- SCREEN: START -->
       <div class="overlay" id="scrStart">
         <img
           class="logo-img"
-          src="https://intranet.universidad-une.com/web/image/website/34/logo/Intranet%20UNE?unique=c33fd40"
+          src="https://intranet.universidad-une.com/web/image/1820826-e12a11bd/logo%20blanco.png"
           alt="UNE Logo"
         />
         <div class="game-title">¡Atrapa tu<br />Uniforme!</div>
@@ -46,9 +71,21 @@
             <div class="legend-col good">
               <h5>✅ Atrapa (+10 pts)</h5>
               <div class="legend-imgs">
-                <img class="legend-thumb" src="https://cdn.shopify.com/s/files/1/0971/1845/4076/files/unestoreuniformes-15.jpg?v=1773875718" alt="Uniforme UNE" />
-                <img class="legend-thumb" src="https://cdn.shopify.com/s/files/1/0971/1845/4076/files/unestoreuniformes-14.jpg?v=1773875718" alt="Uniforme UNE" />
-                <img class="legend-thumb" src="https://cdn.shopify.com/s/files/1/0971/1845/4076/files/unestoreuniformes-13.jpg?v=1773875718" alt="Uniforme UNE" />
+                <img
+                  class="legend-thumb"
+                  src="https://cdn.shopify.com/s/files/1/0971/1845/4076/files/unestoreuniformes-15.jpg?v=1773875718"
+                  alt="Uniforme UNE"
+                />
+                <img
+                  class="legend-thumb"
+                  src="https://cdn.shopify.com/s/files/1/0971/1845/4076/files/unestoreuniformes-14.jpg?v=1773875718"
+                  alt="Uniforme UNE"
+                />
+                <img
+                  class="legend-thumb"
+                  src="https://cdn.shopify.com/s/files/1/0971/1845/4076/files/unestoreuniformes-13.jpg?v=1773875718"
+                  alt="Uniforme UNE"
+                />
               </div>
               <div class="legend-note">Uniformes de la tienda UNE</div>
             </div>
@@ -59,14 +96,17 @@
             </div>
           </div>
           <div style="margin-top: 8px; font-size: 0.73rem; color: var(--label)">
-            🔥 <b style="color: var(--gold)">Combo:</b> 3 buenos seguidos = +20 pts c/u
+            🔥 <b style="color: var(--gold)">Combo:</b> 3 buenos seguidos = +20
+            pts c/u
           </div>
         </div>
-        <div class="rounds-info">
-          <div class="rpill">R1 <span>Normal</span></div>
-          <div class="rpill">R2 <span>Rápido</span></div>
-          <div class="rpill">R3 <span>Veloz</span></div>
-          <div class="rpill">R4 <span>Extremo</span></div>
+        <div class="level-selector">
+          <label>Nivel de dificultad:</label>
+          <div class="level-options">
+            <button class="btn-level active" data-level="0">Normal</button>
+            <button class="btn-level" data-level="1">Rápido</button>
+            <button class="btn-level" data-level="2">Extremo</button>
+          </div>
         </div>
         <div class="controls-hint">
           🖱️ Mouse &nbsp;|&nbsp; 👆 Touch &nbsp;|&nbsp; ⬅️➡️ Teclado

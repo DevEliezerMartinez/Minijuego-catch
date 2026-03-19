@@ -6,15 +6,17 @@
   padding: 0;
 }
 :root {
-  --bg: #0d1526;
-  --border: #1e3a6e;
-  --gold: #c9a84c;
-  --input-bg: #0d1f3c;
-  --label: #8ab4e0;
-  --navy: #1a3060;
-  --red: #e74c3c;
-  --green: #2ecc71;
-  --orange: #f39c12;
+  --color-rojo-une: #e22319;
+  --color-azul-une: #001a71;
+  --bg: var(--color-azul-une);
+  --border: rgba(255, 255, 255, 0.2);
+  --gold: var(--color-rojo-une);
+  --input-bg: rgba(0, 0, 0, 0.2);
+  --label: #e0e0e0;
+  --navy: #000c36;
+  --red: #ff3b30;
+  --green: #34c759;
+  --orange: #ff9500;
   --white: #ffffff;
   --canvas-w: 420px;
   --canvas-h: 560px;
@@ -59,7 +61,7 @@ canvas {
   align-items: center;
   justify-content: flex-start;
   padding: 24px 20px;
-  background: rgba(13, 21, 38, 0.97);
+  background: rgba(0, 26, 113, 0.97);
   z-index: 10;
   overflow-y: auto;
   scrollbar-width: thin;
@@ -92,7 +94,7 @@ canvas {
 }
 /* LEGEND */
 .legend {
-  background: rgba(30, 58, 110, 0.2);
+  background: rgba(255, 255, 255, 0.1);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 12px 16px;
@@ -141,25 +143,46 @@ canvas {
   color: var(--label);
   font-size: 0.73rem;
 }
-/* ROUND PILLS */
-.rounds-info {
+/* LEVEL SELECTOR */
+.level-selector {
+  width: 100%;
+  margin-bottom: 16px;
+  text-align: center;
+}
+.level-selector label {
+  color: var(--gold);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+  display: block;
+}
+.level-options {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
   justify-content: center;
-  margin-bottom: 16px;
 }
-.rpill {
+.btn-level {
   background: rgba(30, 58, 110, 0.25);
   border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 4px 12px;
-  font-size: 0.72rem;
   color: var(--label);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-family: "Outfit", sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
-.rpill span {
-  color: var(--gold);
-  font-weight: 700;
+.btn-level:hover {
+  background: rgba(30, 58, 110, 0.4);
+}
+.btn-level.active {
+  background: var(--gold);
+  color: #0a0a1a;
+  border-color: var(--gold);
+  box-shadow: 0 4px 12px rgba(201, 168, 76, 0.3);
 }
 /* BUTTONS */
 .btn {
@@ -181,6 +204,25 @@ canvas {
   width: 100%;
   max-width: 300px;
 }
+.btn-pause {
+  background: var(--color-rojo-une);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: white;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: transform 0.2s;
+}
+.btn-pause:hover {
+  transform: scale(1.1);
+}
 .btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
@@ -200,7 +242,7 @@ canvas {
   color: var(--white);
 }
 .btn-gray {
-  background: rgba(30, 58, 110, 0.4);
+  background: rgba(255, 255, 255, 0.15);
   color: var(--white);
   border: 1px solid var(--border);
 }
@@ -219,7 +261,7 @@ canvas {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: linear-gradient(to bottom, rgba(13, 21, 38, 0.9), transparent);
+  background: linear-gradient(to bottom, rgba(0, 26, 113, 0.9), transparent);
   z-index: 5;
   pointer-events: none;
 }

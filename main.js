@@ -18,35 +18,44 @@
     "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=120&h=120&fit=crop",
   ];
 
-  const ROUNDS = [
-    { speed: 2.2, label: "Normal" },
-    { speed: 3.2, label: "Rápido" },
-    { speed: 4.4, label: "Veloz" },
-    { speed: 5.8, label: "Extremo" },
+  const LEVELS = [
+    { speed: 2.5, label: "Normal" },
+    { speed: 4.0, label: "Rápido" },
+    { speed: 6.0, label: "Extremo" },
   ];
   const ROUND_TIME = 45;
-  const CART_W = 80, CART_H = 38;
+  const CART_W = 80,
+    CART_H = 38;
   const ITEM_SIZE = 54;
   const HIT_RADIUS = ITEM_SIZE * 0.38; // ~20px — smaller than visual for fairness
   const SPAWN_INTERVAL = 900;
   const CART_SPEED = 7; // px per frame at 60fps
 
   // ── STATE ────────────────────────────────────────────────────────────────────
-  let score = 0, combo = 0, round = 0, timer = ROUND_TIME, gameRunning = false;
+  let score = 0, combo = 0, timer = ROUND_TIME, gameRunning = false;
+  let currentLevelIndex = 0;
+  let isPaused = false;
   let cartX = 0;
-  let items = [], particles = [];
-  let lastTime = 0, spawnTimer = 0, timerAcc = 0;
+  let items = [],
+    particles = [];
+  let lastTime = 0,
+    spawnTimer = 0,
+    timerAcc = 0;
   let comboTimeout = null;
-  let goodImgs = [], badImgs = [];
+  let goodImgs = [],
+    badImgs = [];
   let assetsLoaded = false;
 
   // ── KEYBOARD ─────────────────────────────────────────────────────────────────
   const keys = {};
   window.addEventListener("keydown", (e) => {
     keys[e.key] = true;
-    if (["ArrowLeft","ArrowRight","a","d","A","D"].includes(e.key)) e.preventDefault();
+    if (["ArrowLeft", "ArrowRight", "a", "d", "A", "D"].includes(e.key))
+      e.preventDefault();
   });
-  window.addEventListener("keyup", (e) => { keys[e.key] = false; });
+  window.addEventListener("keyup", (e) => {
+    keys[e.key] = false;
+  });
 
   // ── ELEMENTS ─────────────────────────────────────────────────────────────────
   const canvas = document.getElementById("c");
@@ -60,8 +69,13 @@
   const comboNum = document.getElementById("comboNum");
   const scrStart = document.getElementById("scrStart");
   const scrGameOver = document.getElementById("scrGameOver");
+  const scrPause = document.getElementById("scrPause");
   const btnPlay = document.getElementById("btnPlay");
   const btnPlayTxt = document.getElementById("btnPlayTxt");
+  const btnPause = document.getElementById("btnPause");
+  const btnResume = document.getElementById("btnResume");
+  const btnRestart = document.getElementById("btnRestart");
+  const btnExit = document.getElementById("btnExit");
 
   // ── CANVAS SETUP ─────────────────────────────────────────────────────────────
   function setupCanvas() {
@@ -110,13 +124,23 @@
   function drawBg() {
     const W = canvas.width / (window.devicePixelRatio || 1);
     const H = canvas.height / (window.devicePixelRatio || 1);
-    ctx.fillStyle = "#0d1526";
+    ctx.fillStyle = "#001a71";
     ctx.fillRect(0, 0, W, H);
-    ctx.strokeStyle = "#1e3a6e";
+    ctx.strokeStyle = "rgba(255,255,255,0.1)";
     ctx.lineWidth = 0.5;
     const step = 32;
-    for (let x = 0; x < W; x += step) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
-    for (let y = 0; y < H; y += step) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    for (let x = 0; x < W; x += step) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, H);
+      ctx.stroke();
+    }
+    for (let y = 0; y < H; y += step) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+    }
   }
 
   // ── DRAW CART ─────────────────────────────────────────────────────────────────
@@ -125,18 +149,31 @@
     const H = canvas.height / (window.devicePixelRatio || 1);
     const y = H - CART_H - 16;
     ctx.save();
-    ctx.shadowColor = "rgba(201,168,76,.5)";
+    ctx.shadowColor = "rgba(226,35,25,.5)";
     ctx.shadowBlur = 12;
-    ctx.fillStyle = "#1a3060";
+    ctx.fillStyle = "#000c36";
     ctx.beginPath();
-    ctx.roundRect(cartX, y, CART_W, CART_H, 10);
+    if (ctx.roundRect) {
+      ctx.roundRect(cartX, y, CART_W, CART_H, 10);
+    } else {
+      // Polyfill for Safari
+      const r = 10,
+        w = CART_W,
+        h = CART_H;
+      ctx.moveTo(cartX + r, y);
+      ctx.arcTo(cartX + w, y, cartX + w, y + h, r);
+      ctx.arcTo(cartX + w, y + h, cartX, y + h, r);
+      ctx.arcTo(cartX, y + h, cartX, y, r);
+      ctx.arcTo(cartX, y, cartX + w, y, r);
+      ctx.closePath();
+    }
     ctx.fill();
-    ctx.strokeStyle = "#c9a84c";
+    ctx.strokeStyle = "#e22319";
     ctx.lineWidth = 2;
     ctx.stroke();
     ctx.restore();
     ctx.font = "bold 16px Outfit,sans-serif";
-    ctx.fillStyle = "#c9a84c";
+    ctx.fillStyle = "#e22319";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText("UNE", cartX + CART_W / 2, y + CART_H / 2);
@@ -144,9 +181,9 @@
     [[cartX + 16, wy], [cartX + CART_W - 16, wy]].forEach(([wx, wy]) => {
       ctx.beginPath();
       ctx.arc(wx, wy, wr, 0, Math.PI * 2);
-      ctx.fillStyle = "#c9a84c";
+      ctx.fillStyle = "#e22319";
       ctx.fill();
-      ctx.strokeStyle = "#0d1526";
+      ctx.strokeStyle = "#001a71";
       ctx.lineWidth = 2;
       ctx.stroke();
     });
@@ -163,7 +200,7 @@
       y: -ITEM_SIZE,
       isGood,
       img,
-      speed: ROUNDS[round].speed + Math.random() * 0.5,
+      speed: LEVELS[currentLevelIndex].speed + Math.random() * 0.5,
       wobble: Math.random() * Math.PI * 2,
     });
   }
@@ -182,7 +219,10 @@
       const cx = Math.max(cartX, Math.min(cartX + CART_W, it.x));
       const cy = Math.max(cartY, Math.min(cartY + CART_H, it.y));
       const dist = Math.sqrt((it.x - cx) ** 2 + (it.y - cy) ** 2);
-      if (dist < HIT_RADIUS) { hit(it); return false; }
+      if (dist < HIT_RADIUS) {
+        hit(it);
+        return false;
+      }
       if (it.y > H + 20) return false;
       return true;
     });
@@ -199,19 +239,21 @@
     if (it.img && it.img.complete && it.img.naturalWidth) {
       ctx.drawImage(it.img, it.x - r, it.y - r, ITEM_SIZE, ITEM_SIZE);
     } else {
-      ctx.fillStyle = it.isGood ? "#c9a84c" : "#e74c3c";
+      ctx.fillStyle = it.isGood ? "#e22319" : "#ff9500";
       ctx.fillRect(it.x - r, it.y - r, ITEM_SIZE, ITEM_SIZE);
     }
     ctx.restore();
     // Ring border
     ctx.beginPath();
     ctx.arc(it.x, it.y, r, 0, Math.PI * 2);
-    ctx.strokeStyle = it.isGood ? "#c9a84c" : "#e74c3c";
+    ctx.strokeStyle = it.isGood ? "#e22319" : "#ff9500";
     ctx.lineWidth = 2.5;
     ctx.stroke();
   }
 
-  function drawItems() { items.forEach(drawItemImg); }
+  function drawItems() {
+    items.forEach(drawItemImg);
+  }
 
   // ── HIT LOGIC ─────────────────────────────────────────────────────────────────
   function hit(it) {
@@ -219,12 +261,12 @@
       combo++;
       const pts = combo >= 3 ? 20 : 10;
       score = Math.max(0, score + pts);
-      spawnParticles(it.x, it.y, "#c9a84c");
+      spawnParticles(it.x, it.y, "#e22319");
       if (combo >= 3) showCombo();
     } else {
       score = Math.max(0, score - 15);
       combo = 0;
-      spawnParticles(it.x, it.y, "#e74c3c");
+      spawnParticles(it.x, it.y, "#ff9500");
     }
     updateHUD();
   }
@@ -241,7 +283,15 @@
     for (let i = 0; i < 10; i++) {
       const a = Math.random() * Math.PI * 2;
       const s = 2 + Math.random() * 3;
-      particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, alpha: 1, color, r: 3 + Math.random() * 3 });
+      particles.push({
+        x,
+        y,
+        vx: Math.cos(a) * s,
+        vy: Math.sin(a) * s,
+        alpha: 1,
+        color,
+        r: 3 + Math.random() * 3,
+      });
     }
   }
 
@@ -266,7 +316,7 @@
   // ── HUD ───────────────────────────────────────────────────────────────────────
   function updateHUD() {
     hudScore.textContent = score + " pts";
-    hudRound.textContent = `Ronda ${round + 1}/4 — ${ROUNDS[round].label}`;
+    hudRound.textContent = `Nivel: ${LEVELS[currentLevelIndex].label}`;
     const secs = Math.ceil(timer);
     hudTimer.textContent = secs + "s";
     hudTimer.className = "hud-timer" + (secs <= 10 ? " urgent" : "");
@@ -275,6 +325,11 @@
   // ── GAME LOOP ─────────────────────────────────────────────────────────────────
   function loop(ts) {
     if (!gameRunning) return;
+    if (isPaused) {
+      lastTime = ts;
+      requestAnimationFrame(loop);
+      return;
+    }
     const dt = lastTime ? Math.min(ts - lastTime, 50) : 16.67;
     lastTime = ts;
     const W = canvas.width / (window.devicePixelRatio || 1);
@@ -287,9 +342,19 @@
 
     timerAcc += dt;
     spawnTimer += dt;
-    if (timerAcc >= 1000) { timerAcc -= 1000; timer = Math.max(0, timer - 1); updateHUD(); }
-    if (spawnTimer >= SPAWN_INTERVAL) { spawnTimer = 0; spawnItem(); }
-    if (timer <= 0) { nextRound(); return; }
+    if (timerAcc >= 1000) {
+      timerAcc -= 1000;
+      timer = Math.max(0, timer - 1);
+      updateHUD();
+    }
+    if (spawnTimer >= SPAWN_INTERVAL) {
+      spawnTimer = 0;
+      spawnItem();
+    }
+    if (timer <= 0) {
+      endGame();
+      return;
+    }
     drawBg();
     updateItems(dt);
     drawItems();
@@ -298,21 +363,19 @@
     requestAnimationFrame(loop);
   }
 
-  function nextRound() {
-    round++;
-    if (round >= 4) { endGame(); return; }
-    timer = ROUND_TIME; timerAcc = 0; items = []; spawnTimer = 0; lastTime = 0;
-    updateHUD();
-    requestAnimationFrame(loop);
-  }
-
   // ── START / END ───────────────────────────────────────────────────────────────
   function startGame() {
-    score = 0; combo = 0; round = 0; timer = ROUND_TIME;
-    timerAcc = 0; lastTime = 0; items = []; particles = []; spawnTimer = 0;
+    isPaused = false;
+    score = 0; combo = 0; timer = ROUND_TIME;
+    timerAcc = 0;
+    lastTime = 0;
+    items = [];
+    particles = [];
+    spawnTimer = 0;
     gameRunning = true;
     scrStart.classList.add("hidden");
     scrGameOver.classList.add("hidden");
+    scrPause.classList.add("hidden");
     hud.classList.remove("hidden");
     setupCanvas();
     updateHUD();
@@ -324,9 +387,9 @@
     hud.classList.add("hidden");
     comboToast.classList.remove("show");
     document.getElementById("fScore").value = score;
-    document.getElementById("fRonda").value = round + 1;
+    document.getElementById("fRonda").value = currentLevelIndex + 1;
     let msg = "";
-    if (score >= 300) msg = "🏆 ¡Increíble! Eres un crack de la tienda UNE.";
+    if (score >= 300) msg = "🏆 ¡Increíble! Eres un crack de UNE.";
     else if (score >= 150) msg = "⭐ ¡Muy bien! Tienes ojo para los uniformes.";
     else if (score >= 60) msg = "👍 ¡Buen intento! Sigue practicando.";
     else msg = "💪 ¡La próxima lo haces mejor!";
@@ -340,17 +403,23 @@
   function resetForm() {
     const f = document.getElementById("captureForm");
     const s = document.getElementById("scrSuccess");
-    f.style.display = ""; f.classList.remove("hidden");
-    s.style.display = "none"; s.classList.add("hidden");
+    f.style.display = "";
+    f.classList.remove("hidden");
+    s.style.display = "none";
+    s.classList.add("hidden");
     document.getElementById("formStatus").classList.add("hidden");
     document.getElementById("btnWa").style.display = "none";
-    ["fNombre","fApellidos","fCorreo","fTelefono","fCarrera"].forEach((id) => {
+    ["fNombre", "fApellidos", "fCorreo", "fTelefono", "fCarrera"].forEach(
+      (id) => {
+        const el = document.getElementById(id);
+        el.value = "";
+        el.classList.remove("invalid");
+      },
+    );
+    ["fNivel", "fPlantel"].forEach((id) => {
       const el = document.getElementById(id);
-      el.value = ""; el.classList.remove("invalid");
-    });
-    ["fNivel","fPlantel"].forEach((id) => {
-      const el = document.getElementById(id);
-      el.value = ""; el.classList.remove("invalid");
+      el.value = "";
+      el.classList.remove("invalid");
     });
     document.getElementById("slideCarrera").classList.remove("visible");
     const btn = document.getElementById("btnSubmit");
@@ -362,29 +431,78 @@
   canvas.addEventListener("mousemove", (e) => {
     if (!gameRunning) return;
     const b = wrap.getBoundingClientRect();
-    cartX = Math.max(0, Math.min(e.clientX - b.left - CART_W / 2, b.width - CART_W));
+    cartX = Math.max(
+      0,
+      Math.min(e.clientX - b.left - CART_W / 2, b.width - CART_W),
+    );
   });
-  canvas.addEventListener("touchmove", (e) => {
-    if (!gameRunning) return;
-    e.preventDefault();
-    const b = wrap.getBoundingClientRect();
-    const t = e.touches[0];
-    cartX = Math.max(0, Math.min(t.clientX - b.left - CART_W / 2, b.width - CART_W));
-  }, { passive: false });
+  canvas.addEventListener(
+    "touchmove",
+    (e) => {
+      if (!gameRunning) return;
+      e.preventDefault();
+      const b = wrap.getBoundingClientRect();
+      const t = e.touches[0];
+      cartX = Math.max(
+        0,
+        Math.min(t.clientX - b.left - CART_W / 2, b.width - CART_W),
+      );
+    },
+    { passive: false },
+  );
 
   // ── BUTTONS ───────────────────────────────────────────────────────────────────
   btnPlay.addEventListener("click", startGame);
+
+  function togglePause() {
+    if (!gameRunning) return;
+    isPaused = !isPaused;
+    if (isPaused) {
+      scrPause.classList.remove("hidden");
+    } else {
+      scrPause.classList.add("hidden");
+    }
+  }
+
+  btnPause.addEventListener("click", togglePause);
+  btnResume.addEventListener("click", togglePause);
+  
+  btnRestart.addEventListener("click", () => {
+    isPaused = false;
+    scrPause.classList.add("hidden");
+    startGame();
+  });
+
+  btnExit.addEventListener("click", () => {
+    isPaused = false;
+    gameRunning = false;
+    scrPause.classList.add("hidden");
+    hud.classList.add("hidden");
+    scrStart.classList.remove("hidden");
+  });
+
   document.getElementById("btnReplay2").addEventListener("click", () => {
-    scrGameOver.classList.add("hidden"); startGame();
+    scrGameOver.classList.add("hidden");
+    startGame();
   });
   document.getElementById("btnReplaySuccess").addEventListener("click", () => {
-    scrGameOver.classList.add("hidden"); startGame();
+    scrGameOver.classList.add("hidden");
+    startGame();
+  });
+
+  const levelBtns = document.querySelectorAll(".btn-level");
+  levelBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      levelBtns.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentLevelIndex = parseInt(btn.dataset.level);
+    });
   });
 
   // ── NIVEL CONDITIONAL ─────────────────────────────────────────────────────────
   const fNivel = document.getElementById("fNivel");
   const slideCarrera = document.getElementById("slideCarrera");
-  const BASIC_NIVELES = ["Secundaria","Bachillerato"];
+  const BASIC_NIVELES = ["Secundaria", "Bachillerato"];
   fNivel.addEventListener("change", () => {
     const show = fNivel.value && !BASIC_NIVELES.includes(fNivel.value);
     slideCarrera.classList.toggle("visible", show);
@@ -395,23 +513,50 @@
   // ── SANITIZATION & VALIDATION ─────────────────────────────────────────────────
   function sanitizeText(v) {
     if (typeof v !== "string") return "";
-    return v.replace(/<script[\s\S]*?<\/script>/gi,"").replace(/<[^>]+>/g,"")
-      .replace(/javascript:/gi,"").replace(/\bon\w+\s*=/gi,"").trim().slice(0,200);
+    return v
+      .replace(/<script[\s\S]*?<\/script>/gi, "")
+      .replace(/<[^>]+>/g, "")
+      .replace(/javascript:/gi, "")
+      .replace(/\bon\w+\s*=/gi, "")
+      .trim()
+      .slice(0, 200);
   }
-  function sanitizeEmail(v) { return sanitizeText(v).toLowerCase().slice(0,200); }
-  function sanitizePhone(v) { return sanitizeText(v).replace(/[^\d+\-() ]/g,"").slice(0,20); }
-  function validateEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
-  function validatePhone(p) { return p.replace(/\D/g,"").length >= 10; }
+  function sanitizeEmail(v) {
+    return sanitizeText(v).toLowerCase().slice(0, 200);
+  }
+  function sanitizePhone(v) {
+    return sanitizeText(v)
+      .replace(/[^\d+\-() ]/g, "")
+      .slice(0, 20);
+  }
+  function validateEmail(e) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+  }
+  function validatePhone(p) {
+    return p.replace(/\D/g, "").length >= 10;
+  }
 
-  const VALID_PLANTELES = ["Plantel Torre UNE","Plantel Tesistán"];
-  const VALID_NIVELES = ["Secundaria","Bachillerato","Ciencias de la Salud","Gastronomía","Licenciatura","Posgrado"];
-  function validatePlantel(p) { if (!VALID_PLANTELES.includes(p)) throw new Error("Plantel inválido"); }
-  function validateNivel(n) { if (!VALID_NIVELES.includes(n)) throw new Error("Nivel inválido"); }
+  const VALID_PLANTELES = ["Plantel Torre UNE", "Plantel Tesistán"];
+  const VALID_NIVELES = [
+    "Secundaria",
+    "Bachillerato",
+    "Ciencias de la Salud",
+    "Gastronomía",
+    "Licenciatura",
+    "Posgrado",
+  ];
+  function validatePlantel(p) {
+    if (!VALID_PLANTELES.includes(p)) throw new Error("Plantel inválido");
+  }
+  function validateNivel(n) {
+    if (!VALID_NIVELES.includes(n)) throw new Error("Nivel inválido");
+  }
 
   function setInvalid(el, invalid) {
     el.classList.toggle("invalid", invalid);
     const fe = el.nextElementSibling;
-    if (fe && fe.classList.contains("field-error")) fe.style.display = invalid ? "block" : "none";
+    if (fe && fe.classList.contains("field-error"))
+      fe.style.display = invalid ? "block" : "none";
   }
 
   function validateFormData() {
@@ -423,26 +568,36 @@
     const nivel = document.getElementById("fNivel");
     const carrera = document.getElementById("fCarrera");
     const plantel = document.getElementById("fPlantel");
-    const sn = sanitizeText(nombre.value), sa = sanitizeText(apellidos.value);
-    const se = sanitizeEmail(correo.value), st = sanitizePhone(telefono.value);
-    setInvalid(nombre, sn.length < 2 || sn.length > 100); if (sn.length < 2 || sn.length > 100) ok = false;
-    setInvalid(apellidos, sa.length < 2 || sa.length > 100); if (sa.length < 2 || sa.length > 100) ok = false;
-    setInvalid(correo, !validateEmail(se)); if (!validateEmail(se)) ok = false;
-    setInvalid(telefono, !validatePhone(st)); if (!validatePhone(st)) ok = false;
-    setInvalid(nivel, !VALID_NIVELES.includes(nivel.value)); if (!VALID_NIVELES.includes(nivel.value)) ok = false;
-    setInvalid(plantel, !VALID_PLANTELES.includes(plantel.value)); if (!VALID_PLANTELES.includes(plantel.value)) ok = false;
+    const sn = sanitizeText(nombre.value),
+      sa = sanitizeText(apellidos.value);
+    const se = sanitizeEmail(correo.value),
+      st = sanitizePhone(telefono.value);
+    setInvalid(nombre, sn.length < 2 || sn.length > 100);
+    if (sn.length < 2 || sn.length > 100) ok = false;
+    setInvalid(apellidos, sa.length < 2 || sa.length > 100);
+    if (sa.length < 2 || sa.length > 100) ok = false;
+    setInvalid(correo, !validateEmail(se));
+    if (!validateEmail(se)) ok = false;
+    setInvalid(telefono, !validatePhone(st));
+    if (!validatePhone(st)) ok = false;
+    setInvalid(nivel, !VALID_NIVELES.includes(nivel.value));
+    if (!VALID_NIVELES.includes(nivel.value)) ok = false;
+    setInvalid(plantel, !VALID_PLANTELES.includes(plantel.value));
+    if (!VALID_PLANTELES.includes(plantel.value)) ok = false;
     if (!BASIC_NIVELES.includes(nivel.value) && nivel.value) {
       const sc = sanitizeText(carrera.value);
-      setInvalid(carrera, sc.length < 2); if (sc.length < 2) ok = false;
+      setInvalid(carrera, sc.length < 2);
+      if (sc.length < 2) ok = false;
     }
     return ok;
   }
 
   // ── FORM STATUS ───────────────────────────────────────────────────────────────
   const ICONS = {
-    error: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
-    warn:  '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
-    ok:    '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+    error:
+      '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+    warn: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    ok: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
   };
   function showMsg(type, text, showWa = false) {
     const el = document.getElementById("formStatus");
@@ -451,8 +606,13 @@
     el.classList.remove("hidden");
     document.getElementById("btnWa").style.display = showWa ? "block" : "none";
   }
-  function hideMsg() { document.getElementById("formStatus").classList.add("hidden"); }
-  window.addEventListener("online", () => { showMsg("ok","Conexión restaurada."); setTimeout(hideMsg,3000); });
+  function hideMsg() {
+    document.getElementById("formStatus").classList.add("hidden");
+  }
+  window.addEventListener("online", () => {
+    showMsg("ok", "Conexión restaurada.");
+    setTimeout(hideMsg, 3000);
+  });
 
   // ── SUBMIT ────────────────────────────────────────────────────────────────────
   document.getElementById("btnSubmit").addEventListener("click", async () => {
@@ -466,18 +626,34 @@
     const plantel = document.getElementById("fPlantel").value;
     const sc = parseInt(document.getElementById("fScore").value) || 0;
     const ronda = parseInt(document.getElementById("fRonda").value) || 1;
-    try { validatePlantel(plantel); validateNivel(nivel); }
-    catch (e) { showMsg("error", e.message); return; }
-    if (!navigator.onLine) { showMsg("error","Sin conexión a internet.",true); return; }
+    try {
+      validatePlantel(plantel);
+      validateNivel(nivel);
+    } catch (e) {
+      showMsg("error", e.message);
+      return;
+    }
+    if (!navigator.onLine) {
+      showMsg("error", "Sin conexión a internet.", true);
+      return;
+    }
     const apellidoArr = apellidos.split(" ");
     const apellido_p = apellidoArr[0] || apellidos;
     const apellido_m = apellidoArr.slice(1).join(" ") || "No proporcionado";
     const programaInteres = !BASIC_NIVELES.includes(nivel) ? carrera : nivel;
     const payload = {
-      nombre, apellido_p, apellido_m, correo, telefono,
-      medio: "Juego UNE Store", modalidad: "Escolarizada",
-      nivel_educativo: nivel, plantel_interes: plantel,
-      programa_interes: programaInteres, puntaje: sc, ronda_alcanzada: ronda,
+      nombre,
+      apellido_p,
+      apellido_m,
+      correo,
+      telefono,
+      medio: "Juego UNE Store",
+      modalidad: "Escolarizada",
+      nivel_educativo: nivel,
+      plantel_interes: plantel,
+      programa_interes: programaInteres,
+      puntaje: sc,
+      ronda_alcanzada: ronda,
     };
     const btn = document.getElementById("btnSubmit");
     const btnTxt = document.getElementById("btnSubmitTxt");
@@ -487,29 +663,42 @@
     const ctrl = new AbortController();
     const tid = setTimeout(() => ctrl.abort(), 15000);
     try {
-      const res = await fetch("https://intranet.universidad-une.com/api/createleads", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-        signal: ctrl.signal,
-      });
+      const res = await fetch(
+        "https://intranet.universidad-une.com/api/createleads",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: ctrl.signal,
+        },
+      );
       clearTimeout(tid);
       if (!res.ok) {
         let errMsg = "Error al enviar. Intenta de nuevo.";
-        try { const j = await res.json(); errMsg = j.message || j.error || errMsg; } catch {}
+        try {
+          const j = await res.json();
+          errMsg = j.message || j.error || errMsg;
+        } catch {}
         showMsg("error", errMsg);
-        btn.disabled = false; btnTxt.textContent = "Reintentar"; return;
+        btn.disabled = false;
+        btnTxt.textContent = "Reintentar";
+        return;
       }
       document.getElementById("captureForm").style.display = "none";
       const succ = document.getElementById("scrSuccess");
-      succ.style.display = "block"; succ.classList.remove("hidden");
-      document.getElementById("successSub").textContent = `Gracias ${nombre}, te contactaremos pronto.`;
-      document.getElementById("successPts").textContent = `Tu puntaje: ${sc} pts`;
+      succ.style.display = "block";
+      succ.classList.remove("hidden");
+      document.getElementById("successSub").textContent =
+        `Gracias ${nombre}, te contactaremos pronto.`;
+      document.getElementById("successPts").textContent =
+        `Tu puntaje: ${sc} pts`;
     } catch (err) {
       clearTimeout(tid);
-      if (err.name === "AbortError") showMsg("warn","La conexión tardó demasiado.",true);
-      else showMsg("error","Error de red. Intenta de nuevo.",true);
-      btn.disabled = false; btnTxt.textContent = "Reintentar";
+      if (err.name === "AbortError")
+        showMsg("warn", "La conexión tardó demasiado.", true);
+      else showMsg("error", "Error de red. Intenta de nuevo.", true);
+      btn.disabled = false;
+      btnTxt.textContent = "Reintentar";
     }
   });
 
@@ -517,5 +706,7 @@
   setupCanvas();
   preload();
   drawBg();
-  window.addEventListener("resize", () => { if (!gameRunning) setupCanvas(); });
+  window.addEventListener("resize", () => {
+    if (!gameRunning) setupCanvas();
+  });
 })();
