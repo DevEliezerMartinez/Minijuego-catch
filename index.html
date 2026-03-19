@@ -73,38 +73,90 @@
         <div class="game-title">¡Atrapa tu<br />Uniforme!</div>
         <div class="game-subtitle">El juego arcade de Universidad UNE</div>
         <div class="legend">
-          <h4>¿Qué atrapar?</h4>
-          <div class="legend-row">
+          <h4>¿Cómo jugar?</h4>
+          <div class="legend-row" style="margin-bottom: 12px; row-gap: 16px">
             <div class="legend-col good">
-              <h5>✅ Atrapa (+10 pts)</h5>
+              <h5>✅ Uniformes (+10)</h5>
               <div class="legend-imgs">
                 <img
                   class="legend-thumb"
                   src="https://cdn.shopify.com/s/files/1/0971/1845/4076/files/unestoreuniformes-15.jpg?v=1773875718"
-                  alt="Uniforme UNE"
+                  alt="Uniforme"
                 />
                 <img
                   class="legend-thumb"
                   src="https://cdn.shopify.com/s/files/1/0971/1845/4076/files/unestoreuniformes-14.jpg?v=1773875718"
-                  alt="Uniforme UNE"
+                  alt="Uniforme"
                 />
                 <img
                   class="legend-thumb"
                   src="https://cdn.shopify.com/s/files/1/0971/1845/4076/files/unestoreuniformes-13.jpg?v=1773875718"
-                  alt="Uniforme UNE"
+                  alt="Uniforme"
                 />
               </div>
-              <div class="legend-note">Uniformes de la tienda UNE</div>
             </div>
+
+            <div class="legend-col good">
+              <h5 style="color: #ffda47">🌟 Logos (+20)</h5>
+              <div class="legend-imgs">
+                <img
+                  class="legend-thumb"
+                  src="logos/enjoy.png"
+                  style="background: #000000; object-fit: contain; padding: 2px"
+                  alt="Logo"
+                />
+                <img
+                  class="legend-thumb"
+                  src="logos/linea.png"
+                  style="background: #000000; object-fit: contain; padding: 2px"
+                  alt="Logo"
+                />
+                <img
+                  class="legend-thumb"
+                  src="logos/vtu.png"
+                  style="background: #000000; object-fit: contain; padding: 2px"
+                  alt="Logo"
+                />
+              </div>
+            </div>
+
             <div class="legend-col bad">
-              <h5>❌ Esquiva (−15 pts)</h5>
-              <div class="legend-emojis">🍔🏀🐱🍕🎧🌮🎸🎮</div>
-              <div class="legend-note">Objetos ajenos al plantel</div>
+              <h5>❌ Esquiva (−15)</h5>
+              <div
+                class="legend-emojis"
+                style="
+                  font-size: 0.95rem;
+                  display: flex;
+                  align-items: center;
+                  height: 36px;
+                  border: 2px solid transparent;
+                "
+              >
+                🍔🏀🐱🍕🎧
+              </div>
             </div>
           </div>
-          <div style="margin-top: 8px; font-size: 0.73rem; color: var(--label)">
-            🔥 <b style="color: var(--gold)">Combo:</b> 3 buenos seguidos = +20
-            pts c/u
+
+          <div
+            style="
+              font-size: 0.73rem;
+              color: var(--label);
+              display: flex;
+              flex-direction: column;
+              gap: 4px;
+              border-top: 1px solid var(--border);
+              padding-top: 10px;
+            "
+          >
+            <div>
+              🔥 <b style="color: var(--gold)">Combo x3:</b> Atrapa 3 correctos
+              seguidos y ¡duplica su valor!
+            </div>
+            <div>
+              💔 <b style="color: var(--red)">¡Cuidado!</b> Los objetos ajenos
+              restan puntos y te quitan una vida. Pierde 3 vidas (❤️❤️❤️) y
+              terminará el juego.
+            </div>
           </div>
         </div>
         <div class="level-selector">
@@ -239,41 +291,55 @@
           <input type="hidden" id="fScore" value="0" />
           <input type="hidden" id="fRonda" value="0" />
 
-          <button
-            class="btn btn-gold"
-            id="btnSubmit"
-            style="margin-bottom: 10px"
-          >
-            <span id="btnSubmitTxt">Enviar mi registro</span>
-          </button>
           <div
-            id="btnWa"
-            class="hidden"
-            style="width: 100%; display: none; margin-bottom: 8px"
+            style="
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              width: 100%;
+            "
           >
-            <a
-              href="https://wa.me/523312345678?text=Hola%20UNE%2C%20jugué%20¡Atrapa%20tu%20Uniforme!"
-              target="_blank"
-              class="btn btn-green"
-              style="text-decoration: none"
+            <button
+              class="btn btn-gold"
+              id="btnSubmit"
+              style="margin-bottom: 10px"
             >
-              💬 Contactar por WhatsApp
-            </a>
+              <span id="btnSubmitTxt">Enviar mi registro</span>
+            </button>
+            <div
+              id="btnWa"
+              class="hidden"
+              style="
+                width: 100%;
+                text-align: center;
+                display: none;
+                margin-bottom: 8px;
+              "
+            >
+              <a
+                href="https://wa.me/523312345678?text=Hola%20UNE%2C%20jugué%20¡Atrapa%20tu%20Uniforme!"
+                target="_blank"
+                class="btn btn-green"
+                style="text-decoration: none; margin: 0 auto"
+              >
+                💬 Contactar por WhatsApp
+              </a>
+            </div>
+            <button
+              class="btn btn-gray"
+              id="btnReplay2"
+              style="margin-top: 4px; font-size: 0.85rem"
+            >
+              Jugar de nuevo sin registrarse
+            </button>
+            <button
+              class="btn btn-gray"
+              id="btnExit2"
+              style="margin-top: 8px; font-size: 0.85rem"
+            >
+              Ir al menú principal
+            </button>
           </div>
-          <button
-            class="btn btn-gray"
-            id="btnReplay2"
-            style="margin-top: 4px; font-size: 0.85rem"
-          >
-            Jugar de nuevo sin registrarse
-          </button>
-          <button
-            class="btn btn-gray"
-            id="btnExit2"
-            style="margin-top: 4px; font-size: 0.85rem"
-          >
-            Ir al menú principal
-          </button>
         </div>
 
         <!-- SUCCESS -->
