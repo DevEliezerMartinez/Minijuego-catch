@@ -26,24 +26,31 @@
     { speed: 8.5, label: "Extremo", bg: "#4a0000", spawnFactor: 0.4 },
   ];
   const ROUND_TIME = 45;
-  const CART_W = 80,
-    CART_H = 38;
   const ITEM_SIZE = 54;
   const SPAWN_INTERVAL = 900;
   const CART_SPEED = 7;
 
-  // ── COLISIÓN: tamaño visual real de la camioneta ──────────────────────────
-  // La imagen se dibuja como drawSize = CART_W + 100 = 180px (cuadrada)
-  // El origen Y lógico es: H - CART_H - 16
-  // El origen Y visual (techo de la imagen) es: yLogico - (drawSize - CART_H - 20)
-  // = H - CART_H - 16 - 180 + CART_H + 20 = H - 176
-  // Guardamos constantes para reutilizar en draw y colisión
-  const CART_DRAW_SIZE = CART_W + 100; // 180px
-  const CART_VISUAL_OFFSET = CART_DRAW_SIZE - CART_H - 20; // 122px hacia arriba
+  // ── CAMIONETA: imagen cuadrada 592×592 ───────────────────────────────────
+  // CART_DISPLAY_SIZE = tamaño en px en que se dibuja la imagen (cuadrada 1:1)
+  // Ajusta este valor para hacer la camioneta más grande o más pequeña.
+  const CART_DISPLAY_SIZE = 110; // px — camioneta pequeña, fácil de manejar
 
-  // Zona de captura: ajustamos un padding horizontal para que sea justo
-  const CART_CATCH_PAD_X = 10; // reducir ancho efectivo de captura por cada lado
-  const CART_CATCH_TOP_RATIO = 0.45; // el techo de captura es el 45% superior de la imagen visual
+  // Para colisión y movimiento usamos el ancho lógico del carrito
+  // (zona central donde "caben" los items — no toda la imagen)
+  const CART_W = Math.round(CART_DISPLAY_SIZE * 0.72); // ~79px zona central
+  const CART_H = Math.round(CART_DISPLAY_SIZE * 0.2); // ~22px altura lógica (ruedas)
+
+  // La imagen se ancla por la parte inferior: el fondo de la imagen
+  // queda a 8px del borde inferior del canvas.
+  const CART_BOTTOM_MARGIN = 8; // px desde el borde inferior
+
+  // Zona de captura horizontal: recortamos los bordes de la imagen
+  // (esquinas vacías o fondo transparente) para que la colisión sea justa
+  const CART_CATCH_PAD_X = Math.round(CART_DISPLAY_SIZE * 0.14); // ~15px por lado
+
+  // Qué fracción desde arriba de la imagen es el "techo" del capó
+  // 0.0 = techo de la imagen, 1.0 = fondo. 0.30 = capó superior
+  const CART_CATCH_TOP_RATIO = 0.3;
 
   // ── STATE ────────────────────────────────────────────────────────────────────
   let score = 0,
@@ -111,7 +118,7 @@
     canvas.style.width = w + "px";
     canvas.style.height = h + "px";
     ctx.scale(dpr, dpr);
-    cartX = w / 2 - CART_W / 2;
+    cartX = w / 2 - CART_W / 2; // cartX = borde izquierdo de la zona lógica central
   }
 
   // ── ASSET PRELOAD ─────────────────────────────────────────────────────────────
@@ -174,22 +181,22 @@
   }
 
   // ── HELPERS DE POSICIÓN DEL CARRITO ──────────────────────────────────────────
-  // Devuelve las coordenadas de dibujo de la camioneta para el frame actual.
-  // Se usa tanto en drawCart() como en updateItems() para tener UNA sola fuente de verdad.
+  // Fuente única de verdad: tanto drawCart() como updateItems() usan esta función.
+  // La imagen (592×592) se dibuja cuadrada a CART_DISPLAY_SIZE px.
+  // Se ancla por la parte INFERIOR: el fondo de la imagen queda a CART_BOTTOM_MARGIN del borde.
   function getCartRect() {
-    const W = canvas.width / (window.devicePixelRatio || 1);
     const H = canvas.height / (window.devicePixelRatio || 1);
-    const yLogico = H - CART_H - 16; // base lógica (ruedas)
-    const drawY = yLogico - CART_VISUAL_OFFSET; // techo visual de la imagen
-    const drawX = cartX - 50; // mismo offset que en drawCart
 
-    // Zona de colisión: un rectángulo que representa la "caja" de la camioneta
-    // Empezamos en el 45% superior de la imagen para que la captura suceda
-    // justo cuando el item toca el techo/capó, no el suelo
-    const catchTop = drawY + CART_DRAW_SIZE * CART_CATCH_TOP_RATIO;
-    const catchBottom = drawY + CART_DRAW_SIZE; // fondo de imagen
+    // drawX: centramos la imagen sobre cartX (que representa el centro lógico del carrito)
+    const drawX = cartX - (CART_DISPLAY_SIZE - CART_W) / 2;
+    // drawY: la imagen termina en H - CART_BOTTOM_MARGIN
+    const drawY = H - CART_DISPLAY_SIZE - CART_BOTTOM_MARGIN;
+
+    // Zona de captura
+    const catchTop = drawY + CART_DISPLAY_SIZE * CART_CATCH_TOP_RATIO;
+    const catchBottom = H - CART_BOTTOM_MARGIN; // fondo real de la imagen
     const catchLeft = drawX + CART_CATCH_PAD_X;
-    const catchRight = drawX + CART_DRAW_SIZE - CART_CATCH_PAD_X;
+    const catchRight = drawX + CART_DISPLAY_SIZE - CART_CATCH_PAD_X;
 
     return { drawX, drawY, catchTop, catchBottom, catchLeft, catchRight };
   }
@@ -199,12 +206,17 @@
     const { drawX, drawY } = getCartRect();
 
     if (cartImg.complete && cartImg.naturalWidth) {
-      ctx.drawImage(cartImg, drawX, drawY, CART_DRAW_SIZE, CART_DRAW_SIZE);
+      ctx.drawImage(
+        cartImg,
+        drawX,
+        drawY,
+        CART_DISPLAY_SIZE,
+        CART_DISPLAY_SIZE,
+      );
     } else {
-      // Fallback: rectángulo estilizado
-      const W = canvas.width / (window.devicePixelRatio || 1);
+      // Fallback: rectángulo estilizado cuando la imagen no carga
       const H = canvas.height / (window.devicePixelRatio || 1);
-      const y = H - CART_H - 16;
+      const y = H - CART_H - CART_BOTTOM_MARGIN;
       ctx.save();
       ctx.shadowColor = "rgba(226,35,25,.5)";
       ctx.shadowBlur = 12;
@@ -228,16 +240,16 @@
       ctx.lineWidth = 2;
       ctx.stroke();
       ctx.restore();
-      ctx.font = "bold 16px Outfit,sans-serif";
+      ctx.font = "bold 14px Outfit,sans-serif";
       ctx.fillStyle = "#e22319";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText("UNE", cartX + CART_W / 2, y + CART_H / 2);
-      const wr = 7,
-        wy = y + CART_H + 2;
+      const wr = 6,
+        wy = y + CART_H + 3;
       [
-        [cartX + 16, wy],
-        [cartX + CART_W - 16, wy],
+        [cartX + 14, wy],
+        [cartX + CART_W - 14, wy],
       ].forEach(([wx, wy]) => {
         ctx.beginPath();
         ctx.arc(wx, wy, wr, 0, Math.PI * 2);
