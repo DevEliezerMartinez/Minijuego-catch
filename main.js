@@ -29,9 +29,21 @@
   const CART_W = 80,
     CART_H = 38;
   const ITEM_SIZE = 54;
-  const HIT_RADIUS = ITEM_SIZE * 0.38; // ~20px — smaller than visual for fairness
   const SPAWN_INTERVAL = 900;
-  const CART_SPEED = 7; // px per frame at 60fps
+  const CART_SPEED = 7;
+
+  // ── COLISIÓN: tamaño visual real de la camioneta ──────────────────────────
+  // La imagen se dibuja como drawSize = CART_W + 100 = 180px (cuadrada)
+  // El origen Y lógico es: H - CART_H - 16
+  // El origen Y visual (techo de la imagen) es: yLogico - (drawSize - CART_H - 20)
+  // = H - CART_H - 16 - 180 + CART_H + 20 = H - 176
+  // Guardamos constantes para reutilizar en draw y colisión
+  const CART_DRAW_SIZE = CART_W + 100; // 180px
+  const CART_VISUAL_OFFSET = CART_DRAW_SIZE - CART_H - 20; // 122px hacia arriba
+
+  // Zona de captura: ajustamos un padding horizontal para que sea justo
+  const CART_CATCH_PAD_X = 10; // reducir ancho efectivo de captura por cada lado
+  const CART_CATCH_TOP_RATIO = 0.45; // el techo de captura es el 45% superior de la imagen visual
 
   // ── STATE ────────────────────────────────────────────────────────────────────
   let score = 0,
@@ -51,7 +63,7 @@
     badImgs = [],
     logoImgs = [];
   let cartImg = new Image();
-  cartImg.src = "Camioneta2.png";
+  cartImg.src = "Camioneta3.png";
   let goodSound = new Audio("efectos/bad.m4a");
   let badSound = new Audio("life.m4a");
   let wrongs = 0;
@@ -161,21 +173,38 @@
     }
   }
 
-  // ── DRAW CART ─────────────────────────────────────────────────────────────────
-  function drawCart() {
+  // ── HELPERS DE POSICIÓN DEL CARRITO ──────────────────────────────────────────
+  // Devuelve las coordenadas de dibujo de la camioneta para el frame actual.
+  // Se usa tanto en drawCart() como en updateItems() para tener UNA sola fuente de verdad.
+  function getCartRect() {
     const W = canvas.width / (window.devicePixelRatio || 1);
     const H = canvas.height / (window.devicePixelRatio || 1);
-    const y = H - CART_H - 16;
+    const yLogico = H - CART_H - 16; // base lógica (ruedas)
+    const drawY = yLogico - CART_VISUAL_OFFSET; // techo visual de la imagen
+    const drawX = cartX - 50; // mismo offset que en drawCart
+
+    // Zona de colisión: un rectángulo que representa la "caja" de la camioneta
+    // Empezamos en el 45% superior de la imagen para que la captura suceda
+    // justo cuando el item toca el techo/capó, no el suelo
+    const catchTop = drawY + CART_DRAW_SIZE * CART_CATCH_TOP_RATIO;
+    const catchBottom = drawY + CART_DRAW_SIZE; // fondo de imagen
+    const catchLeft = drawX + CART_CATCH_PAD_X;
+    const catchRight = drawX + CART_DRAW_SIZE - CART_CATCH_PAD_X;
+
+    return { drawX, drawY, catchTop, catchBottom, catchLeft, catchRight };
+  }
+
+  // ── DRAW CART ─────────────────────────────────────────────────────────────────
+  function drawCart() {
+    const { drawX, drawY } = getCartRect();
+
     if (cartImg.complete && cartImg.naturalWidth) {
-      const drawSize = CART_W + 100; // Mantiene el marco cuadrado 1:1
-      ctx.drawImage(
-        cartImg,
-        cartX - 50,
-        y - drawSize + CART_H + 20,
-        drawSize,
-        drawSize,
-      );
+      ctx.drawImage(cartImg, drawX, drawY, CART_DRAW_SIZE, CART_DRAW_SIZE);
     } else {
+      // Fallback: rectángulo estilizado
+      const W = canvas.width / (window.devicePixelRatio || 1);
+      const H = canvas.height / (window.devicePixelRatio || 1);
+      const y = H - CART_H - 16;
       ctx.save();
       ctx.shadowColor = "rgba(226,35,25,.5)";
       ctx.shadowBlur = 12;
@@ -184,7 +213,6 @@
       if (ctx.roundRect) {
         ctx.roundRect(cartX, y, CART_W, CART_H, 10);
       } else {
-        // Polyfill for Safari
         const r = 10,
           w = CART_W,
           h = CART_H;
@@ -222,6 +250,16 @@
     }
   }
 
+  // ── DEBUG: descomentar para ver la zona de colisión ───────────────────────────
+  // function drawCollisionDebug() {
+  //   const { catchTop, catchBottom, catchLeft, catchRight } = getCartRect();
+  //   ctx.save();
+  //   ctx.strokeStyle = "lime";
+  //   ctx.lineWidth = 2;
+  //   ctx.strokeRect(catchLeft, catchTop, catchRight - catchLeft, catchBottom - catchTop);
+  //   ctx.restore();
+  // }
+
   // ── ITEMS ─────────────────────────────────────────────────────────────────────
   function spawnItem() {
     const W = canvas.width / (window.devicePixelRatio || 1);
@@ -255,24 +293,38 @@
   function updateItems(dt) {
     const W = canvas.width / (window.devicePixelRatio || 1);
     const H = canvas.height / (window.devicePixelRatio || 1);
+
+    // Obtener zona de colisión real sincronizada con el dibujo
+    const { catchTop, catchBottom, catchLeft, catchRight } = getCartRect();
+    const itemR = ITEM_SIZE / 2;
+
     items.forEach((it) => {
       it.wobble += 0.08;
       const dynSpeed = it.speed + Math.sin(it.wobble * 2) * 2.0;
       it.y += Math.max(0.5, dynSpeed) * (dt / 16.67);
       it.x += Math.sin(it.wobble) * 1.5;
-      it.x = Math.max(ITEM_SIZE / 2, Math.min(W - ITEM_SIZE / 2, it.x));
+      it.x = Math.max(itemR, Math.min(W - itemR, it.x));
     });
-    // Circle-rect collision
-    const cartY = H - CART_H - 16;
+
     items = items.filter((it) => {
-      const cx = Math.max(cartX, Math.min(cartX + CART_W, it.x));
-      const cy = Math.max(cartY, Math.min(cartY + CART_H, it.y));
-      const dist = Math.sqrt((it.x - cx) ** 2 + (it.y - cy) ** 2);
-      if (dist < HIT_RADIUS) {
+      // Borde inferior del item (el punto que "toca" primero)
+      const itemBottom = it.y + itemR;
+      const itemLeft = it.x - itemR;
+      const itemRight = it.x + itemR;
+
+      // Colisión: el borde inferior del item entra en la zona de captura
+      // y el item tiene superposición horizontal con la camioneta
+      const verticalHit = itemBottom >= catchTop && it.y - itemR < catchBottom;
+      const horizontalHit = itemRight >= catchLeft && itemLeft <= catchRight;
+
+      if (verticalHit && horizontalHit) {
         hit(it);
         return false;
       }
-      if (it.y > H + 20) return false;
+
+      // Eliminar si sale por debajo de la pantalla
+      if (it.y - itemR > H + 10) return false;
+
       return true;
     });
   }
@@ -282,7 +334,6 @@
     ctx.save();
     const isBlinking = Math.floor(Date.now() / 150) % 2 === 0;
     ctx.globalAlpha = isBlinking ? 0.6 : 1.0;
-    // Circular clip
     ctx.beginPath();
     ctx.arc(it.x, it.y, r, 0, Math.PI * 2);
     ctx.closePath();
@@ -294,7 +345,6 @@
       ctx.fillRect(it.x - r, it.y - r, ITEM_SIZE, ITEM_SIZE);
     }
     ctx.restore();
-    // Ring border
     ctx.beginPath();
     ctx.arc(it.x, it.y, r, 0, Math.PI * 2);
     ctx.strokeStyle = it.isGood ? "#e22319" : "#ff9500";
@@ -412,7 +462,7 @@
     lastTime = ts;
     const W = canvas.width / (window.devicePixelRatio || 1);
 
-    // Keyboard movement
+    // Movimiento por teclado
     if (keys["ArrowLeft"] || keys["a"] || keys["A"])
       cartX = Math.max(0, cartX - CART_SPEED * (dt / 16.67));
     if (keys["ArrowRight"] || keys["d"] || keys["D"])
@@ -437,11 +487,15 @@
       endGame();
       return;
     }
+
     drawBg();
     updateItems(dt);
     drawItems();
     updateDrawParticles(dt);
     drawCart();
+
+    // drawCollisionDebug(); // ← descomentar para depurar colisiones visualmente
+
     requestAnimationFrame(loop);
   }
 
