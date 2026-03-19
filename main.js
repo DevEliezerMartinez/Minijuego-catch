@@ -73,6 +73,7 @@
   cartImg.src = "Camioneta3.png";
   let goodSound = new Audio("efectos/bad.m4a");
   let badSound = new Audio("life.m4a");
+  let gameOverSound = new Audio("game over.m4a");
   let wrongs = 0;
   let assetsLoaded = false;
 
@@ -506,6 +507,15 @@
     updateDrawParticles(dt);
     drawCart();
 
+    // Efecto dramático de tensión en rojo cuando queda 1 vida
+    if (wrongs === 2) {
+      ctx.save();
+      const pulseAlpha = 0.18 + Math.sin(Date.now() / 100) * 0.15;
+      ctx.fillStyle = `rgba(255, 0, 0, ${pulseAlpha})`;
+      ctx.fillRect(0, 0, W, canvas.height / (window.devicePixelRatio || 1));
+      ctx.restore();
+    }
+
     // drawCollisionDebug(); // ← descomentar para depurar colisiones visualmente
 
     requestAnimationFrame(loop);
@@ -534,6 +544,10 @@
   }
 
   function endGame() {
+    try {
+      gameOverSound.currentTime = 0;
+      gameOverSound.play().catch((e) => {});
+    } catch (e) {}
     gameRunning = false;
     hud.classList.add("hidden");
     comboToast.classList.remove("show");
